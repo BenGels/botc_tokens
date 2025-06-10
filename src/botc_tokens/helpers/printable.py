@@ -21,7 +21,8 @@ class Printable:
             margin_vertical=74,
             padding=0,
             diameter=None,
-            close_packing=True
+            close_packing=True,
+            scriptname=None
     ):
         """Create a new printable object.
 
@@ -40,6 +41,7 @@ class Printable:
         """
         # 8.5"x11" at 300dpi is 2550 x 3300px
         # Subtracting 74px from each side to account for printer margins leaves our default of 2402 x 3152px
+        self.scriptname = None
         self.page_width = page_width - (margin_horizontal * 2)
         self.page_height = page_height - (margin_vertical * 2)
         self.page = None
@@ -56,8 +58,25 @@ class Printable:
         self.padding = padding
         self.diameter = diameter
         self.close_packing = close_packing
+        self.start_x = 0
+        self.start_y = 0
 
         self.save_page()  # Initializes the first page
+
+    def set_linebreak(self, linebreak_file):
+        self.linebreak = linebreak_file
+
+    def set_linebreak_switch(self, linebreak_switch):
+        self.linebreak_switch = linebreak_switch
+
+    def set_start(self, x, y):
+        self.start_x = x
+        self.start_y = y
+        self.reset_start()
+
+    def reset_start(self):
+        self.current_x = self.start_x
+        self.current_y = self.start_y
 
     def save_page(self):
         """Save the current page and reset the state."""
@@ -120,3 +139,48 @@ class Printable:
                 # Check to see if we have reached the end of the page
                 if self.current_y + self.diameter > self.page.height:
                     self.save_page()
+
+
+    def set_background(self, background):
+        """Add a background to the pdf"""
+        self.page.composite(background, left=0, top=0)
+
+        self.scriptname = None
+
+
+    def add_breakline(self, position):
+
+        if(position % 2 == 1):
+            self.current_y += 5
+            self.page.composite(self.linebreak, left=int(self.start_x), top=int(self.current_y))
+            self.current_y += 5 + self.linebreak.height
+        else:
+            self.page.composite(self.linebreak_switch, left=int(self.start_x), top=int(self.current_y-40))
+            self.current_y += 5 + self.linebreak.height
+
+    def add_script_token(self, token_file, breakline, blockLineBreak):
+        """Add a token to the current page."""
+        print(f"\n[red]Error:[/][bold] {token_file} has linebreak {breakline} and blockline {blockLineBreak}")
+        with Image(filename=token_file) as token:
+            # Unless we have a fixed
+            # diameter, use the largest dimension of the first token as the diameter
+            #if breakline:
+            #    self.current_y += 70
+
+
+ #           if self.current_x > self.start_x and breakline:
+ #               self.current_x = self.start_x
+ #               self.current_y += token.height + 0
+
+            self.page.composite(token, left=int(self.current_x), top=int(self.current_y))
+
+            self.current_x += token.width
+            if self.current_x > token.width + self.start_x:
+                self.current_x = self.start_x
+                self.current_y += token.height + 0
+
+            #if blockLineBreak:
+            #    self.current_y += 30
+
+
+

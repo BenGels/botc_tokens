@@ -1,13 +1,14 @@
 """Functions for creating tokens."""
 # Standard Library
 import string
+import math
 
 # Third Party
 from wand.image import Image
 
 # Application Specific
 from .role import Role
-from .text_tools import curved_text_to_image, fit_ability_text
+from .text_tools import curved_text_to_image, fit_ability_text, fit_ability_text_block, rolename_to_image
 from .token_components import TokenComponents
 
 
@@ -105,3 +106,53 @@ def create_role_token(
     # Resize to requested diameter
     token.resize(width=diameter, height=diameter)
     return token
+
+def create_role_script_block(
+        token_icon: Image,
+        role: Role,
+        components: TokenComponents):
+    """Create and save a role block for scripts.
+
+    Args:
+        token_icon (wand.image.Image): The icon to be used for the role.
+        role (dict): The role data to use for the token.
+        components (TokenComponents): The component package to use.
+    """
+    # Adjust icon size
+    # The "^" modifier means this transform specifies the minimum height and width.
+    # A transform without a modifier specifies the maximum height and width.
+    target_width = components.script_block.width * 0.14
+    target_height = components.script_block.height * 0.78
+    token_icon.transform(resize=f"{target_width}x{target_height}^")
+    token_icon.transform(resize=f"{target_width}x{target_height}")
+
+    # Check if we have reminders. If so, add leaves.
+    block = components.get_script_block_bg()
+
+    # Determine where to place the icon.
+    icon_x = math.floor(block.width  * 0.02)
+    icon_y = ((block.height - token_icon.height) // 2)
+    #icon_y = math.floor(block.height * 0.1)
+    block.composite(token_icon, left=icon_x, top=icon_y)
+    token_icon.close()
+    # Check for modifiers
+    ability_text_img = fit_ability_text_block(
+        text=role.ability,
+        font_size=int(block.height * 0.15),
+        first_line_width=int(block.width * .82),
+        left=int(block.width * .20),
+        components=components
+    )
+    ability_text_x = int(block.width * .20)
+    block.composite(ability_text_img, left=ability_text_x, top=int(block.height * 0.30))
+    ability_text_img.close()
+    # Add the role name to the token
+    text_img = rolename_to_image(role.name, components)
+    text_x = int(block.width * .20)
+    text_y = int(block.height * .10)
+    block.composite(text_img, left=text_x, top=text_y)
+    text_img.close()
+
+    # Resize to requested diameter
+    # block.resize(width=diameter, height=diameter)
+    return block

@@ -30,7 +30,9 @@ class TokenComponents:
         "AbilityText.*",
         "AbilityTextBold.*",
         "ReminderText.*",
-        "RoleName.*"
+        "RoleName.*",
+        "scriptTypeLine.*",
+        "ScriptBlock.png"
     ]
 
     def __init__(self, component_package=None):
@@ -102,11 +104,24 @@ class TokenComponents:
         self.left_leaf = Image(filename=self.comp_path / "LeafLeft.png")
         self.right_leaf = Image(filename=self.comp_path / "LeafRight.png")
         self.setup_flower = Image(filename=self.comp_path / "SetupFlower.png")
+        self.script_block = Image(filename=self.comp_path / "ScriptBlock.png")
+        self.script_type_line = Image(filename=self.comp_path / "scriptTypeLine.png")
+        self.script_type_line_broken = Image(filename=self.comp_path / "scriptTypeLineSwitch.png")
 
         self.AbilityTextFont = next(self.comp_path.glob("AbilityText.*"))
         self.AbilityTextBoldFont = next(self.comp_path.glob("AbilityTextBold.*"))
         self.ReminderTextFont = next(self.comp_path.glob("ReminderText.*"))
         self.RoleNameFont = next(self.comp_path.glob("RoleName.*"))
+
+        self.ScriptBackground = Image(filename=self.comp_path / "ScriptBackground.png")
+
+    def get_script_bg(self):
+        return self.ScriptBackground.clone()
+
+    def get_script_type_line_broken(self):
+        return self.script_type_line_broken.clone()
+    def get_script_type_line(self):
+        return self.script_type_line.clone()
 
     def get_reminder_bg(self):
         """Get the reminder background image."""
@@ -115,6 +130,10 @@ class TokenComponents:
     def get_role_bg(self):
         """Get the role background image."""
         return self.role_bg.clone()
+
+    def get_script_block_bg(self):
+        """Get the script blcok background imagr"""
+        return self.script_block.clone();
 
     def dump(self, target_dir):
         """Dump all component files to a target directory."""
@@ -139,6 +158,7 @@ class TokenComponents:
         self.left_leaf.close()
         self.right_leaf.close()
         self.setup_flower.close()
+        self.script_block.close()
 
         # Clean up the temp directory
         self.temp_dir.cleanup()

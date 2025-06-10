@@ -88,6 +88,69 @@ def fit_ability_text(text, font_size, first_line_width, step, components):
         img.virtual_pixel = 'transparent'
     return img
 
+def fit_ability_text_block(text, font_size, first_line_width, left, components):
+    """Take an ability text and fit it to a given width.
+
+    Args:
+        text (str): The text to be displayed.
+        font_size (int): The size of the font to be used.
+        first_line_width (int): The width of the first line of text.
+        left (int): padding left.
+        components (TokenComponents): The component package to load fonts from.
+    """
+    img = Image(width=1, height=1, resolution=(600, 600))
+    # Make sure we have text to draw. Otherwise, just return an empty image.
+    if text == "":
+        return img
+
+    with Drawing() as draw:
+        # Assign font details
+        draw.font = str(components.AbilityTextFont)
+        draw.font_size = font_size
+        draw.fill_color = Color("#000000")
+        # Determine how many lines we need and how long each line needs to be.
+        # Since we never want more than 4 lines, we'll add a loop checking if we have exceeded that, and then just
+        # start the line counter above that limit so that we run at least once.
+        original_text = text
+
+        lines = [1, 2, 3, 4, 5, 6]
+        while len(lines) > 5:
+            text = original_text
+            line_text = text
+            lines = []
+            target_width = first_line_width
+            largest_line_width = 0
+            max_height = 0
+            while len(text) > 0:
+
+                # Find the longest line that fits within the target width
+                metrics = draw.get_font_metrics(img, line_text)
+
+                while metrics.text_width > target_width:
+                    line_text = " ".join(line_text.split(" ")[:-1])
+                    metrics = draw.get_font_metrics(img, line_text)
+
+                # Now that we have a line that fits, update all our tracking variables
+                largest_line_width = max(largest_line_width, metrics.text_width)
+                max_height = max_height + metrics.text_height
+
+                lines.append(line_text.strip())
+                # Remove the line we just added from the text, and set up line_text for the next line
+                text = text[len(line_text):]
+                line_text = text
+
+        # Actually draw the text
+        current_y = 0
+        img.resize(width=int(first_line_width), height=int(max_height * 1.2))  # Add a little padding
+        for line_text in lines:
+            metrics = draw.get_font_metrics(img, line_text)
+            current_x = int(0)
+            current_y = int(current_y + metrics.text_height)
+            # Change the font to bold if we have a bracket
+            draw.text(current_x, current_y, line_text)
+        draw(img)
+        img.virtual_pixel = 'transparent'
+    return img
 
 def curved_text_to_image(text, token_type, token_diameter, components, use_large_fonts=False):
     """Change a text string into an image with curved text.
@@ -157,6 +220,44 @@ def curved_text_to_image(text, token_type, token_diameter, components, use_large
         img.distort('arc', (curve_degree, 180))
     return img
 
+def rolename_to_image(text, components):
+    """Change a text string into an image with curved text.
+
+    Args:
+        text (str): The text to be displayed.
+        components (TokenComponents): The component package to load fonts from.
+        use_large_fonts (bool): Whether to use larger fonts for the text.
+    """
+    # Make sure we have text to draw. Otherwise, just return an empty image.
+    img = Image(width=1, height=1, resolution=(600, 600))
+    if text == "":
+        return img
+
+    block = components.get_script_block_bg()
+    # Set up the font and color based on the token type
+    font_size = components.get_script_block_bg().height * 0.25
+    print(f"[red]Error:[/][bold] font_size: {font_size}[/]")
+    font_filepath = str(components.RoleNameFont)
+    color = "#000000"
+    text = text.upper()
+    print(f"[red]Error:[/][bold] text: {text}[/]")
+
+    # Create the image
+    with Drawing() as draw:
+        # Assign font details
+        draw.font = font_filepath
+        draw.font_size = font_size
+        draw.fill_color = Color(color)
+        # Get size of text
+        height, width = 0, math.inf
+
+        # Resize the image
+        img.resize(width=int(block.width*0.8), height=int(block.height * 0.2))
+        # Draw the text
+        draw.text(0, int(block.height * 0.2), text)
+        draw(img)
+        img.virtual_pixel = 'transparent'
+    return img
 
 def format_filename(in_string):
     """Take a string and return a valid filename constructed from the string.

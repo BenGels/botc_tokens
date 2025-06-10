@@ -18,7 +18,7 @@ from ..helpers.progress_group import setup_progress_group
 from ..helpers.role import Role
 from ..helpers.text_tools import format_filename
 from ..helpers.token_components import TokenComponents
-from ..helpers.token_creation import create_reminder_token, create_role_token
+from ..helpers.token_creation import create_reminder_token, create_role_token, create_role_script_block
 
 
 def _parse_args():
@@ -80,8 +80,9 @@ def run():
 
             # Skip if the token already exists
             token_output_path = role_output_path / f"{role_slug}.png"
-            if token_output_path.exists():
-                continue
+            block_output_path = role_output_path / f"{role_slug}-scriptblock.png"
+            #if token_output_path.exists() & block_output_path.exists():
+             #   continue
 
             # Create the reminder tokens
             icon_path = Path(str(role.icon))
@@ -119,6 +120,11 @@ def run():
             # Save the token
             token.save(filename=token_output_path)
             token.close()
+
+            block_token_icon = icon.clone()
+            block =create_role_script_block(block_token_icon, role, components)
+            block.save(filename=block_output_path)
+            block.close()
 
             # Update the progress bar
             overall_progress.update(overall_task, advance=1)
