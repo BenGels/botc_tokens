@@ -6,6 +6,10 @@ from pathlib import Path
 # Third Party
 from wand.image import Image
 
+from .token_components import TokenComponents
+from ..helpers.text_tools import fit_ability_text_block, fit_ability_text_block_with_font
+
+
 # Application Specific
 
 
@@ -62,6 +66,34 @@ class Printable:
         self.start_y = 0
 
         self.save_page()  # Initializes the first page
+
+    def write_typeline(self, components, character_type):
+        ability_text_img = fit_ability_text_block_with_font(
+            text=character_type.upper(),
+            font_size=40,
+            first_line_width=300,
+            left=0,
+            components=components,
+            font=components.RoleNameFont
+        )
+
+        self.page.composite(ability_text_img, left=(self.page_width - 300), top=self.current_y-80)
+        ability_text_img.close()
+
+    def write_scriptname(
+            self,
+            scriptname: str,
+            components: TokenComponents):
+        ability_text_img = fit_ability_text_block(
+            text=scriptname,
+            font_size=50,
+            first_line_width=200,
+            left=0,
+            components=components
+        )
+
+        self.page.composite(ability_text_img, left=(self.page_width - 800), top=100)
+        ability_text_img.close()
 
     def set_linebreak(self, linebreak_file):
         self.linebreak = linebreak_file
@@ -143,6 +175,7 @@ class Printable:
 
     def set_background(self, background):
         """Add a background to the pdf"""
+        background.resize(width=(background.width - (self.margin_horizontal * 2)), height=(background.height - (self.margin_vertical * 2)))
         self.page.composite(background, left=0, top=0)
 
         self.scriptname = None
@@ -158,9 +191,9 @@ class Printable:
             self.page.composite(self.linebreak_switch, left=int(self.start_x), top=int(self.current_y-40))
             self.current_y += 5 + self.linebreak.height
 
-    def add_script_token(self, token_file, breakline, blockLineBreak):
+    def add_script_token(self, token_file, forceSwitch):
         """Add a token to the current page."""
-        print(f"\n[red]Error:[/][bold] {token_file} has linebreak {breakline} and blockline {blockLineBreak}")
+
         with Image(filename=token_file) as token:
             # Unless we have a fixed
             # diameter, use the largest dimension of the first token as the diameter
@@ -172,10 +205,13 @@ class Printable:
  #               self.current_x = self.start_x
  #               self.current_y += token.height + 0
 
+            token_width = int((self.page_width - (self.margin_horizontal * 2) - self.start_x) / 2)
+            print(f"\n[red]Error:[/][bold] {token_file} width {forceSwitch}")
+            token.resize(width=token_width)
             self.page.composite(token, left=int(self.current_x), top=int(self.current_y))
 
             self.current_x += token.width
-            if self.current_x > token.width + self.start_x:
+            if self.current_x > token.width + self.start_x or forceSwitch:
                 self.current_x = self.start_x
                 self.current_y += token.height + 0
 

@@ -139,7 +139,7 @@ def create_role_script_block(
     ability_text_img = fit_ability_text_block(
         text=role.ability,
         font_size=int(block.height * 0.15),
-        first_line_width=int(block.width * .82),
+        first_line_width=int(block.width * .8),
         left=int(block.width * .20),
         components=components
     )

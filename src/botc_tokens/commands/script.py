@@ -69,6 +69,7 @@ def _parse_args():
     parser.add_argument('--duplicates', type=str, default=None,
                         help="A json file containing the number of duplicates to add for each role.")
     parser.add_argument("--grid", action="store_true", help="Use a grid layout instead of close packing.")
+    parser.add_argument("--blocklinebreak", type=bool, default=False, help="Block type switch after type changes")
     args = parser.parse_args(sys.argv[2:])
 
     return args
@@ -113,7 +114,7 @@ def run():
         step_task = step_progress.add_task("Adding roles")
         role_page = Printable(
             output_dir,
-            basename="roles",
+            basename="script",
             page_width=args.paper_width,
             page_height=args.paper_height,
             margin_vertical=args.margin_vertical,
@@ -131,11 +132,12 @@ def run():
         role_page.set_background(components.get_script_bg())
         role_page.set_linebreak(components.get_script_type_line())
         role_page.set_linebreak_switch(components.get_script_type_line_broken())
-        role_page.set_start(200,390)
+        role_page.set_start(200 + role_page.margin_horizontal,320 + role_page.margin_vertical)
 
+        #role_page.write_scriptname(args.scriptname, components)
 
         process_tokens(role_images, role_page, script,
-                       step_progress, step_task)
+                       step_progress, step_task, args.blocklinebreak, components)
 
         # Save the last pages
         step_progress.update(step_task, description="Saving pages")
@@ -161,22 +163,23 @@ def load_components(component_package):
     return components
 
 def process_tokens(role_images, role_page, script,
-                   step_progress, step_task):
+                   step_progress, step_task, blockline, components):
     """Do all the processing.
 
     If we are being honest, this function exists separate from the run() function only to decrease its complexity.
     """
     last_character = "townsfolk"
+    role_page.write_typeline(components, last_character)
 
     for i in range(len(script)):
         print(f"------------------------------------------------------")
         role = script[i]
-        blockLineBreak = False
+        forceSwitch = False
 
         if isinstance(role, dict):
             continue  # Skip metadata
 
-        last_role = None
+
 
         print(f"[yellow]Warning:[/] last_character type: {last_character}")
 
@@ -186,7 +189,8 @@ def process_tokens(role_images, role_page, script,
             print(f"[yellow]Warning:[/] previous_character {last_role} ({get_role_type_by_name(last_role, role_images)})")
             if last_role != None and not isinstance(last_role, dict) and get_role_type_by_name(role, role_images) != get_role_type_by_name(last_role, role_images) and (i % 2) == 0:
                 print(f"[yellow]Warning:[/] Character type switch")
-                blockLineBreak = True
+                if(blockline == True):
+                    forceSwitch = True
 
 
 
@@ -206,8 +210,9 @@ def process_tokens(role_images, role_page, script,
         if character_type != last_character:
             print(f"[yellow]Warning:[/] create type break to {character_type}")
             role_page.add_breakline(i)
+            role_page.write_typeline(components, character_type)
 
-        role_page.add_script_token(role_file, (character_type != last_character and blockLineBreak != True), blockLineBreak)
+        role_page.add_script_token(role_file, forceSwitch)
 
 
 

@@ -127,6 +127,9 @@ class TokenComponents:
         """Get the reminder background image."""
         return self.reminder_bg.clone()
 
+    def get_font(self):
+        return self.AbilityTextBoldFont
+
     def get_role_bg(self):
         """Get the role background image."""
         return self.role_bg.clone()

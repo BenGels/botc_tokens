@@ -89,6 +89,9 @@ def fit_ability_text(text, font_size, first_line_width, step, components):
     return img
 
 def fit_ability_text_block(text, font_size, first_line_width, left, components):
+    return fit_ability_text_block_with_font(text, font_size, first_line_width, left, components, components.AbilityTextFont)
+
+def fit_ability_text_block_with_font(text, font_size, first_line_width, left, components, font):
     """Take an ability text and fit it to a given width.
 
     Args:
@@ -105,7 +108,7 @@ def fit_ability_text_block(text, font_size, first_line_width, left, components):
 
     with Drawing() as draw:
         # Assign font details
-        draw.font = str(components.AbilityTextFont)
+        draw.font = str(font)
         draw.font_size = font_size
         draw.fill_color = Color("#000000")
         # Determine how many lines we need and how long each line needs to be.
