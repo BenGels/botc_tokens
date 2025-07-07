@@ -139,7 +139,7 @@ def create_role_script_block(
     ability_text_img = fit_ability_text_block(
         text=role.ability,
         font_size=int(block.height * 0.15),
-        first_line_width=int(block.width * .8),
+        first_line_width=int(block.width * .75),
         left=int(block.width * .20),
         components=components
     )
@@ -156,3 +156,27 @@ def create_role_script_block(
     # Resize to requested diameter
     # block.resize(width=diameter, height=diameter)
     return block
+
+
+
+def create_role_nightorder(
+        token_icon: Image):
+    """Create and save a role block for night order.
+
+    Args:
+        token_icon (wand.image.Image): The icon to be used for the role.
+    """
+    if(token_icon.height < token_icon.width):
+        resize_multiplicator = 100 / token_icon.width
+    else:
+        resize_multiplicator = 100 / token_icon.height
+
+    target_width = token_icon.width * resize_multiplicator
+    target_height = token_icon.height * resize_multiplicator
+    token_icon.transform(resize=f"{target_width}x{target_height}^")
+    token_icon.transform(resize=f"{target_width}x{target_height}")
+
+    if token_icon.width > token_icon.height + 10:
+        token_icon.rotate(270)
+
+    return token_icon

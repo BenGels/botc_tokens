@@ -18,7 +18,8 @@ from ..helpers.progress_group import setup_progress_group
 from ..helpers.role import Role
 from ..helpers.text_tools import format_filename
 from ..helpers.token_components import TokenComponents
-from ..helpers.token_creation import create_reminder_token, create_role_token, create_role_script_block
+from ..helpers.token_creation import create_reminder_token, create_role_token, create_role_script_block, \
+    create_role_nightorder
 
 
 def _parse_args():
@@ -81,6 +82,7 @@ def run():
             # Skip if the token already exists
             token_output_path = role_output_path / f"{role_slug}.png"
             block_output_path = role_output_path / f"{role_slug}-scriptblock.png"
+            nightorder_output_path = role_output_path / f"{role_slug}-nightorder.png"
             #if token_output_path.exists() & block_output_path.exists():
              #   continue
 
@@ -122,9 +124,14 @@ def run():
             token.close()
 
             block_token_icon = icon.clone()
-            block =create_role_script_block(block_token_icon, role, components)
+            block = create_role_script_block(block_token_icon, role, components)
             block.save(filename=block_output_path)
             block.close()
+
+            night_token_icon = icon.clone()
+            nightorder = create_role_nightorder(night_token_icon)
+            nightorder.save(filename=nightorder_output_path)
+            nightorder.close()
 
             # Update the progress bar
             overall_progress.update(overall_task, advance=1)

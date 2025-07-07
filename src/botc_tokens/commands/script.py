@@ -28,6 +28,10 @@ def _parse_args():
     )
     parser.add_argument('script', type=str,
                         help='the json file or directory containing the script info.')
+
+    parser.add_argument('--nightorder', type=str,
+                        help='the json file containing the nightorder.')
+
     token_dir_default = 'tokens'
     parser.add_argument('--token-dir', type=str, default=token_dir_default,
                         help="Name of the directory in which to find the token images. Ignored if script is a "
@@ -51,7 +55,6 @@ def _parse_args():
                         help=f"The margin (in pixels) between the top/bottom of the paper and the tokens. "
                              f"(Default: {margin_default})")
 
-    scriptname = None
     parser.add_argument('--scriptname', type=str, default=None,
                         help=f"Name of the script to be visible on the top. ")
 
@@ -74,25 +77,24 @@ def _parse_args():
 
     return args
 
+def create_order(script, order):
+    if isinstance(script[0], dict):
+        script.pop(0)
+    intersected_roles_first_night = list(set(script) & set(order))
+    sorted_firstNight = sorted(intersected_roles_first_night, key=lambda x: order.index(x))
+    return sorted_firstNight
 
 def run():
     """Create printable sheets based on a script json file."""
     args = _parse_args()
 
-    # Check to make sure that the margin leaves enough room for the tokens
-    #if args.paper_width - (args.margin_horizontal * 2) <= 0:
-    #    print("[red]Error:[/] The horizontal margin is too large for the paper width.")
-    #    return 1
-    #if args.paper_height - (args.margin_vertical * 2) <= 0:
-    #    print("[red]Error:[/] The vertical margin is too large for the paper height.")
-    #    return 1
-
-    # Ensure the script file/directory exists
-
     # Read the script json file
     print(f"[green]Reading {args.script}...[/]")
     try:
         script = load_script(args)
+        with open(data_dir / "nightsheet.json", "r") as f:
+              nightorder = json.load(f)
+
     except RuntimeError as e:
         print(f"[red]Error:[/] Unable to load script {args.script}: {str(e)}")
         return 1
@@ -100,7 +102,7 @@ def run():
     # Find all the token images
     token_files = Path(args.token_dir).rglob("*.png")
     print("[green]Finding Token Images...[/]")
-    role_images = find_images(token_files)
+    role_images = find_scriptblocks(token_files)
 
     # Create the printable sheets
     print(f"[green]Creating sheets in {args.output_dir}...[/]", end="")
@@ -118,11 +120,7 @@ def run():
             page_width=args.paper_width,
             page_height=args.paper_height,
             margin_vertical=args.margin_vertical,
-            margin_horizontal=args.margin_horizontal,
-            padding=args.padding,
-            diameter=args.fixed_role_size,
-            close_packing=not args.grid,
-            scriptname=args.scriptname
+            margin_horizontal=args.margin_horizontal
         )
         components = load_components(args.components)
         if components is None:
@@ -146,6 +144,53 @@ def run():
         # Clean up
         role_page.close()
 
+        create_backside(nightorder, script, args)
+        return None
+
+
+def create_backside(nightorder, script, args):
+    try:
+        script = load_script(args)
+
+
+    except RuntimeError as e:
+        print(f"[red]Error:[/] Unable to load script {args.script}: {str(e)}")
+        return 1
+
+    token_files = Path(args.token_dir).rglob("*.png")
+    print("[green]Finding Token Images...[/]")
+    role_images = find_images(token_files, "nightorder")
+
+    # Create the printable sheets
+    print(f"[green]Creating sheets in {args.output_dir}...[/]", end="")
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    role_page = Printable(
+        output_dir,
+        basename="backside",
+        page_width=args.paper_width,
+        page_height=args.paper_height,
+        margin_vertical=args.margin_vertical,
+        margin_horizontal=args.margin_horizontal
+    )
+    components = load_components(args.components)
+    if components is None:
+        print(f"\n[red]Error:[/][bold] Could not load component")
+        return
+
+    role_page.set_background(components.get_script_back())
+    role_page.set_start(450,30)
+    process_firstnightorder(role_images, role_page, nightorder["firstNight"], script, components, True)
+    role_page.set_start(args.paper_width - 450, args.paper_height - 150)
+    othernight = nightorder["otherNight"].copy()
+    othernight.reverse()
+    process_firstnightorder(role_images, role_page, othernight, script, components, False)
+    role_page.write()
+    role_page.close()
+    return None
+
+
 def load_components(component_package):
     """Handle loading the components from a directory or zip file, and alerting the user if it fails."""
     try:
@@ -161,6 +206,24 @@ def load_components(component_package):
         print(f"\n[red]Error:[/][bold] Unable to load components from '{component_package}': {str(e)}")
         return None
     return components
+
+def process_firstnightorder(role_images, role_page, nightorder, script, components, firstnight):
+    print(f"[green]Finding night order...{nightorder}]")
+    print(f"[green]sorted_firstNight...{create_order(script.copy(), nightorder)}]")
+    sorted_order = create_order(script.copy(), nightorder)
+
+    for i in range(len(sorted_order)):
+        print(f"------------------------------------------------------")
+        role = sorted_order[i]
+        role_name = role.lower().strip()
+        role_file = next((t for t in role_images if role_name == t.stem.lower().replace("'", "").replace("-nightorder", "")), None)
+        if not role_file:
+            print(f"[yellow]Warning:[/] No token found for {role_name}")
+            continue
+
+        role_page.add_night_token(role_file, firstnight)
+        #print(f"[green]sorted_otherNight...{create_order(script.copy(), nightorder["otherNight"])}]")
+
 
 def process_tokens(role_images, role_page, script,
                    step_progress, step_task, blockline, components):
@@ -179,22 +242,12 @@ def process_tokens(role_images, role_page, script,
         if isinstance(role, dict):
             continue  # Skip metadata
 
-
-
-        print(f"[yellow]Warning:[/] last_character type: {last_character}")
-
         print(f"[yellow]Warning:[/] current character: {role}")
         if i < (len(script)-1) and i > 1:
             last_role = script[i-1]
-            print(f"[yellow]Warning:[/] previous_character {last_role} ({get_role_type_by_name(last_role, role_images)})")
             if last_role != None and not isinstance(last_role, dict) and get_role_type_by_name(role, role_images) != get_role_type_by_name(last_role, role_images) and (i % 2) == 0:
-                print(f"[yellow]Warning:[/] Character type switch")
                 if(blockline == True):
                     forceSwitch = True
-
-
-
-        print(f"[yellow]Warning:[/] current i {i}")
 
         role_name = role.lower().strip()
 
@@ -208,14 +261,10 @@ def process_tokens(role_images, role_page, script,
         character_type = get_character_type(str(role_file))
 
         if character_type != last_character:
-            print(f"[yellow]Warning:[/] create type break to {character_type}")
             role_page.add_breakline(i)
             role_page.write_typeline(components, character_type)
 
         role_page.add_script_token(role_file, forceSwitch)
-
-
-
         last_character = character_type
 
 def get_role_type_by_name(role, role_images):
@@ -239,12 +288,15 @@ def get_character_type(role_file):
 
     return ""
 
-def find_images(token_files):
+def find_scriptblocks(token_files):
+    return find_images(token_files, "scriptblock")
+
+def find_images(token_files, needle):
     """Populate role and reminder lists with the images we find."""
     role_images = []
     for img_file in token_files:
 
-        if "scriptblock" in img_file.name:
+        if needle in img_file.name:
             role_images.append(img_file)
     return role_images
 

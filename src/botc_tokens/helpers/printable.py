@@ -185,26 +185,26 @@ class Printable:
 
         if(position % 2 == 1):
             self.current_y += 5
-            self.page.composite(self.linebreak, left=int(self.start_x), top=int(self.current_y))
+            self.page.composite(self.linebreak, left=int(self.start_x+50), top=int(self.current_y))
             self.current_y += 5 + self.linebreak.height
         else:
-            self.page.composite(self.linebreak_switch, left=int(self.start_x), top=int(self.current_y-40))
+            self.page.composite(self.linebreak_switch, left=int(self.start_x+50), top=int(self.current_y-40))
             self.current_y += 5 + self.linebreak.height
+
+    def add_night_token(self, token_file, firstnight):
+        with Image(filename=token_file) as token:
+            if (firstnight == False):
+                self.current_x -= (token.width + 10)
+            self.page.composite(token, left=int(self.current_x), top=int(self.current_y))
+            if(firstnight == True):
+                self.current_x += (token.width + 10)
+
+
 
     def add_script_token(self, token_file, forceSwitch):
         """Add a token to the current page."""
 
         with Image(filename=token_file) as token:
-            # Unless we have a fixed
-            # diameter, use the largest dimension of the first token as the diameter
-            #if breakline:
-            #    self.current_y += 70
-
-
- #           if self.current_x > self.start_x and breakline:
- #               self.current_x = self.start_x
- #               self.current_y += token.height + 0
-
             token_width = int((self.page_width - (self.margin_horizontal * 2) - self.start_x) / 2)
             print(f"\n[red]Error:[/][bold] {token_file} width {forceSwitch}")
             token.resize(width=token_width)
@@ -214,9 +214,3 @@ class Printable:
             if self.current_x > token.width + self.start_x or forceSwitch:
                 self.current_x = self.start_x
                 self.current_y += token.height + 0
-
-            #if blockLineBreak:
-            #    self.current_y += 30
-
-
-

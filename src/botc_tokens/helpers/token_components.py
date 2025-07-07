@@ -114,9 +114,13 @@ class TokenComponents:
         self.RoleNameFont = next(self.comp_path.glob("RoleName.*"))
 
         self.ScriptBackground = Image(filename=self.comp_path / "ScriptBackground.png")
+        self.ScriptBackside = Image(filename=self.comp_path / "ScriptBackside.png")
 
     def get_script_bg(self):
         return self.ScriptBackground.clone()
+
+    def get_script_back(self):
+        return self.ScriptBackside.clone()
 
     def get_script_type_line_broken(self):
         return self.script_type_line_broken.clone()
