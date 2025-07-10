@@ -123,11 +123,13 @@ def run():
             token.save(filename=token_output_path)
             token.close()
 
+            # Create the script entries
             block_token_icon = icon.clone()
             block = create_role_script_block(block_token_icon, role, components)
             block.save(filename=block_output_path)
             block.close()
 
+            # Create the night order symbols
             night_token_icon = icon.clone()
             nightorder = create_role_nightorder(night_token_icon)
             nightorder.save(filename=nightorder_output_path)

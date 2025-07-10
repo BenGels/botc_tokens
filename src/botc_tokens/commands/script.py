@@ -28,10 +28,8 @@ def _parse_args():
     )
     parser.add_argument('script', type=str,
                         help='the json file or directory containing the script info.')
-
     parser.add_argument('--nightorder', type=str,
                         help='the json file containing the nightorder.')
-
     token_dir_default = 'tokens'
     parser.add_argument('--token-dir', type=str, default=token_dir_default,
                         help="Name of the directory in which to find the token images. Ignored if script is a "
@@ -41,12 +39,6 @@ def _parse_args():
     output_dir_default = 'printables'
     parser.add_argument('-o', '--output-dir', type=str, default=output_dir_default,
                         help=f"Name of the directory in which to output the sheets. (Default: {output_dir_default})")
-    parser.add_argument('--fixed-role-size', type=int, default=None,
-                        help="The radius (in pixels) to allocate per role tokens. "
-                             "(Default: The first token's largest dimension)")
-    parser.add_argument('--fixed-reminder-size', type=int, default=None,
-                        help="The radius (in pixels) to allocate per reminder tokens. "
-                             "(Default: The first token's largest dimension)")
     margin_default = 74
     parser.add_argument('--margin-horizontal', type=int, default=margin_default,
                         help=f"The margin (in pixels) between the left/right edge of the paper and the tokens. "
@@ -54,13 +46,6 @@ def _parse_args():
     parser.add_argument('--margin-vertical', type=int, default=margin_default,
                         help=f"The margin (in pixels) between the top/bottom of the paper and the tokens. "
                              f"(Default: {margin_default})")
-
-    parser.add_argument('--scriptname', type=str, default=None,
-                        help=f"Name of the script to be visible on the top. ")
-
-    padding_default = 0
-    parser.add_argument('--padding', type=int, default=padding_default,
-                        help=f"The padding (in pixels) between tokens. (Default: {padding_default})")
     paper_width_default = 2550
     parser.add_argument('--paper-width', type=int, default=paper_width_default,
                         help="The width (in pixels) of the paper to use for the tokens. "
@@ -69,9 +54,6 @@ def _parse_args():
     parser.add_argument('--paper-height', type=int, default=paper_height_default,
                         help="The height (in pixels) of the paper to use for the tokens. "
                              f"(Default: {paper_height_default})")
-    parser.add_argument('--duplicates', type=str, default=None,
-                        help="A json file containing the number of duplicates to add for each role.")
-    parser.add_argument("--grid", action="store_true", help="Use a grid layout instead of close packing.")
     parser.add_argument("--blocklinebreak", type=bool, default=False, help="Block type switch after type changes")
     args = parser.parse_args(sys.argv[2:])
 
@@ -80,9 +62,9 @@ def _parse_args():
 def create_order(script, order):
     if isinstance(script[0], dict):
         script.pop(0)
-    intersected_roles_first_night = list(set(script) & set(order))
-    sorted_firstNight = sorted(intersected_roles_first_night, key=lambda x: order.index(x))
-    return sorted_firstNight
+    intersected_roles_night = list(set(script) & set(order))
+    sorted_night = sorted(intersected_roles_night, key=lambda x: order.index(x))
+    return sorted_night
 
 def run():
     """Create printable sheets based on a script json file."""
@@ -132,8 +114,6 @@ def run():
         role_page.set_linebreak_switch(components.get_script_type_line_broken())
         role_page.set_start(200 + role_page.margin_horizontal,320 + role_page.margin_vertical)
 
-        #role_page.write_scriptname(args.scriptname, components)
-
         process_tokens(role_images, role_page, script,
                        step_progress, step_task, args.blocklinebreak, components)
 
@@ -148,11 +128,9 @@ def run():
         return None
 
 
-def create_backside(nightorder, script, args):
+def create_backside(nightorder, args):
     try:
         script = load_script(args)
-
-
     except RuntimeError as e:
         print(f"[red]Error:[/] Unable to load script {args.script}: {str(e)}")
         return 1
@@ -181,11 +159,11 @@ def create_backside(nightorder, script, args):
 
     role_page.set_background(components.get_script_back())
     role_page.set_start(450,30)
-    process_firstnightorder(role_images, role_page, nightorder["firstNight"], script, components, True)
+    process_first_night_order(role_images, role_page, nightorder["firstNight"], script, components, True)
     role_page.set_start(args.paper_width - 450, args.paper_height - 150)
     othernight = nightorder["otherNight"].copy()
     othernight.reverse()
-    process_firstnightorder(role_images, role_page, othernight, script, components, False)
+    process_first_night_order(role_images, role_page, othernight, script, components, False)
     role_page.write()
     role_page.close()
     return None
@@ -207,13 +185,10 @@ def load_components(component_package):
         return None
     return components
 
-def process_firstnightorder(role_images, role_page, nightorder, script, components, firstnight):
-    print(f"[green]Finding night order...{nightorder}]")
-    print(f"[green]sorted_firstNight...{create_order(script.copy(), nightorder)}]")
+def process_first_night_order(role_images, role_page, nightorder, script, components, firstnight):
     sorted_order = create_order(script.copy(), nightorder)
 
     for i in range(len(sorted_order)):
-        print(f"------------------------------------------------------")
         role = sorted_order[i]
         role_name = role.lower().strip()
         role_file = next((t for t in role_images if role_name == t.stem.lower().replace("'", "").replace("-nightorder", "")), None)
@@ -222,8 +197,6 @@ def process_firstnightorder(role_images, role_page, nightorder, script, componen
             continue
 
         role_page.add_night_token(role_file, firstnight)
-        #print(f"[green]sorted_otherNight...{create_order(script.copy(), nightorder["otherNight"])}]")
-
 
 def process_tokens(role_images, role_page, script,
                    step_progress, step_task, blockline, components):
@@ -235,14 +208,12 @@ def process_tokens(role_images, role_page, script,
     role_page.write_typeline(components, last_character)
 
     for i in range(len(script)):
-        print(f"------------------------------------------------------")
         role = script[i]
         forceSwitch = False
 
         if isinstance(role, dict):
             continue  # Skip metadata
 
-        print(f"[yellow]Warning:[/] current character: {role}")
         if i < (len(script)-1) and i > 1:
             last_role = script[i-1]
             if last_role != None and not isinstance(last_role, dict) and get_role_type_by_name(role, role_images) != get_role_type_by_name(last_role, role_images) and (i % 2) == 0:
@@ -255,7 +226,6 @@ def process_tokens(role_images, role_page, script,
         # See if we have tokens for this role
         role_file = next((t for t in role_images if role_name == t.stem.lower().replace("'", "").replace("-scriptblock", "")), None)
         if not role_file:
-            print(f"[yellow]Warning:[/] No token found for {role_name}")
             continue
         # Check if we should add duplicate tokens
         character_type = get_character_type(str(role_file))
