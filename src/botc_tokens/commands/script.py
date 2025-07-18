@@ -124,7 +124,7 @@ def run():
         # Clean up
         role_page.close()
 
-        create_backside(nightorder, script, args)
+        create_backside(nightorder, args)
         return None
 
 

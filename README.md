@@ -69,3 +69,23 @@ You can now print your tokens and use them in your games. Remember, this is a fa
 affiliated with the official game in any way. We do not own the rights to the game, and we do not claim to. We are just
 fans who want to make the game more accessible to everyone. Please support the creators by 
 [buying the game](https://bloodontheclocktower.com/buy). It is absolutely worth it!
+
+##Creating scripts
+For those of you loving to run custom scripts, but want to look them a bit more fancy than what the official script tool
+is giving you, you can create script sheets. The required objects will be created by running the `create` command, which
+create also images with suffix -nightorder and -scriptblock
+
+### Create script PDF from json script definiton
+Once you have created your token images, you can use the `script` command to create a double sided script with all roles
+and their description on the one side and the backside will have the role icons in order of the first night order on the
+top and for all other nights on the botton of the script. This command can take a directory or a JSON file with desired role grouping, which follows the
+formatting of the [official script tool](https://script.bloodontheclocktower.com/).
+
+This will not include any script name right now. So please use a PDF tool of your choice to add the script name and a logo
+on front and back if required.
+
+Known issues: In c
+
+```bash
+botc_tokens script /path/to/script.json --token-dir /path/to/tokens --output-dir /path/to/printables
+```
